@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Калькулятор</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #1a1a1a;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .calc {
+    width: 320px;
+    background: #2b2b2b;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  .display {
+    background: #000;
+    color: #fff;
+    font-size: 36px;
+    text-align: right;
+    padding: 20px 15px;
+    border-radius: 12px;
+    margin-bottom: 15px;
+    min-height: 80px;
+    word-wrap: break-word;
+    overflow: hidden;
+  }
+  .buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  button {
+    border: none;
+    background: #3d3d3d;
+    color: #fff;
+    font-size: 22px;
+    padding: 18px 0;
+    border-radius: 12px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  button:active { background: #555; }
+  .op { background: #ff9500; }
+  .eq { background: #34c759; }
+  .clr { background: #ff3b30; }
+
+  .gallery {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #111;
+    padding: 15px;
+    overflow-y: auto;
+    z-index: 100;
+    -webkit-overflow-scrolling: touch;
+  }
+  .gallery.active { display: block; }
+  .gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    color: #fff;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .gallery-header h2 { font-size: 18px; }
+  .gallery-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .gallery-actions button {
+    background: #ff9500;
+    padding: 8px 10px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+  .close-btn { background: #ff3b30 !important; }
+  .danger-btn { background: #8e0000 !important; }
+
+  .photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+  .item {
+    position: relative;
+    background: #222;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .item img, .item video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .file-icon {
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    font-size: 11px;
+    word-break: break-all;
+    width: 100%;
+  }
+  .file-icon .ext { font-size: 28px; display: block; margin-bottom: 5px; }
+  .badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .del {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: #ff3b30;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    border: 2px solid #fff;
+  }
+  .empty {
+    color: #777;
+    text-align: center;
+    padding: 20px;
+    font-size: 13px;
+    grid-column: 1 / -1;
+  }
+
+  .fullscreen {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 200;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+  }
+  .fullscreen.active { display: flex; }
+  .fullscreen img, .fullscreen video {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .close-fs, .del-fs {
+    position: absolute;
+    top: 15px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    background: rgba(255,255,255,0.2);
+  }
+  .close-fs { right: 15px; }
+  .del-fs { left: 15px; background: rgba(255,59,48,0.9); }
+
+  .ios-hint {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    text-align: center;
+    z-index: 300;
+    max-width: 300px;
+    border: 1px solid #444;
+  }
+  .ios-hint button {
+    margin-top: 8px;
+    background: #ff9500;
+    padding: 8px 16px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="calc">
+  <div class="display" id="display">0</div>
+  <div class="buttons">
+    <button class="clr" onclick="clearAll()">C</button>
+    <button onclick="press('(')">(</button>
+    <button onclick="press(')')">)</button>
+    <button class="op" onclick="press('/')">÷</button>
+    <button onclick="press('7')">7</button>
+    <button onclick="press('8')">8</button>
+    <button onclick="press('9')">9</button>
+    <button class="op" onclick="press('*')">×</button>
+    <button onclick="press('4')">4</button>
+    <button onclick="press('5')">5</button>
+    <button onclick="press('6')">6</button>
+    <button class="op" onclick="press('-')">−</button>
+    <button onclick="press('1')">1</button>
+    <button onclick="press('2')">2</button>
+    <button onclick="press('3')">3</button>
+    <button class="op" onclick="press('+')">+</button>
+    <button onclick="press('0')">0</button>
+    <button onclick="press('.')">.</button>
+    <button class="eq" onclick="equals()">=</button>
+    <button class="op" onclick="backspace()">⌫</button>
+  </div>
+</div>
+
+<div class="gallery" id="gallery">
+  <div class="gallery-header">
+    <h2>🔒 Скрытое</h2>
+    <div class="gallery-actions">
+      <button onclick="addFiles('image/*,video/*')">+ Медиа</button>
+      <button onclick="addFiles('*/*')">+ Файл</button>
+      <button class="danger-btn" onclick="clearAllData()">Очистить всё</button>
+      <button class="close-btn" onclick="closeGallery()">Закрыть</button>
+    </div>
+  </div>
+  <div class="photos" id="photos"></div>
+</div>
+
+<div class="fullscreen" id="fullscreen">
+  <div id="fsContent"></div>
+  <button class="close-fs" onclick="closeFullscreen()">✕</button>
+  <button class="del-fs" onclick="deleteCurrentFs()">🗑</button>
+</div>
+
+<div class="ios-hint" id="iosHint">
+  📱 Чтобы фото не пропадали — добавь сайт на экран «Домой».
+  <br>
+  <button onclick="hideIosHint()">Понятно</button>
+</div>
+
+<input type="file" id="fileInput" multiple style="display:none">
+
+<script>
+var SECRET_CODE = '25637';
+var DB_NAME = 'secret_vault';
+var STORE = 'items';
+var db = null;
+var current = '';
+var display = document.getElementById('display');
+var gallery = document.getElementById('gallery');
+var photosDiv = document.getElementById('photos');
+var fileInput = document.getElementById('fileInput');
+var fsCurrent = null;
+
+// ============ Сохранение на iPhone ============
+// Запрос постоянного хранилища
+function requestPersist() {
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().then(function(granted) {
+      console.log('Постоянное хранилище:', granted ? 'включено' : 'не предоставлено');
+    });
+  }
+  if (navigator.storage && navigator.storage.estimate) {
+    navigator.storage.estimate().then(function(est) {
+      console.log('Использовано:', Math.round(est.usage / 1024 / 1024) + ' МБ из ' + Math.round(est.quota / 1024 / 1024) + ' МБ');
+    });
+  }
+}
+
+// Проверка, запущено ли как PWA (с экрана Домой)
+function isStandalone() {
+  return window.navigator.standalone === true ||
+         window.matchMedia('(display-mode: standalone)').matches;
+}
+
+// Проверка, iPhone ли это
+function isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Показываем подсказку на iPhone, если НЕ добавлено на экран Домой
+function checkIOSHint() {
+  if (isIOS() && !isStandalone()) {
+    var shown = localStorage.getItem('ios_hint_shown');
+    if (!shown) {
+      document.getElementById('iosHint').style.display = 'block';
+    }
+  }
+}
+
+function hideIosHint() {
+  document.getElementById('iosHint').style.display = 'none';
+  localStorage.setItem('ios_hint_shown', '1');
+}
+
+// ============ IndexedDB ============
+function openDB() {
+  var req = indexedDB.open(DB_NAME, 1);
+  req.onupgradeneeded = function(e) {
+    var d = e.target.result;
+    if (!d.objectStoreNames.contains(STORE)) {
+      d.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+    }
+  };
+  req.onsuccess = function(e) { db = e.target.result; };
+  req.onerror = function(e) { console.log('DB error', e); };
+}
+
+function press(c) {
+  if (current === '0') current = '';
+  current += c;
+  display.textContent = current;
+}
+
+function clearAll() {
+  current = '';
+  display.textContent = '0';
+}
+
+function backspace() {
+  current = current.slice(0, -1);
+  display.textContent = current || '0';
+}
+
+function equals() {
+  if (current === SECRET_CODE) {
+    openGallery();
+    return;
+  }
+  try {
+    var r = eval(current);
+    if (r === undefined || isNaN(r)) {
+      display.textContent = 'Ошибка';
+      current = '';
+    } else {
+      display.textContent = r;
+      current = String(r);
+    }
+  } catch (err) {
+    display.textContent = 'Ошибка';
+    current = '';
+  }
+}
+
+function openGallery() {
+  if (!db) openDB();
+  gallery.classList.add('active');
+  loadFiles();
+  clearAll();
+}
+
+function closeGallery() {
+  gallery.classList.remove('active');
+  photosDiv.innerHTML = '';
+  clearAll();
+}
+
+function extOf(n) {
+  var p = n.split('.');
+  return p.length > 1 ? p.pop().toUpperCase() : 'FILE';
+}
+
+function iconFor(t, n) {
+  if (t.indexOf('image') === 0) return '🖼️';
+  if (t.indexOf('video') === 0) return '🎬';
+  if (t.indexOf('audio') === 0) return '🎵';
+  if (n.toLowerCase().indexOf('.apk') > -1) return '📱';
+  if (n.toLowerCase().indexOf('.pdf') > -1) return '📄';
+  return '📁';
+}
+
+function deleteFile(id, name) {
+  if (!confirm('Удалить «' + name + '»?')) return;
+  var tx = db.transaction(STORE, 'readwrite');
+  tx.objectStore(STORE).delete(id);
+  tx.oncomplete = function() {
+    if (fsCurrent && fsCurrent.id === id) closeFullscreen();
+    loadFiles();
+  };
+}
+
+function loadFiles() {
+  if (!db) { openDB(); return; }
+  var tx = db.transaction(STORE, 'readonly');
+  var req = tx.objectStore(STORE).getAll();
+  req.onsuccess = function() {
+    var files = req.result || [];
+    photosDiv.innerHTML = '';
+    if (files.length === 0) {
+      photosDiv.innerHTML = '<div class="empty">Нет файлов.</div>';
+      return;
+    }
+    for (var i = 0; i < files.length; i++) {
+      (function(f) {
+        var div = document.createElement('div');
+        div.className = 'item';
+        var url = URL.createObjectURL(f.blob);
+        var t = f.type || '';
+        var fname = f.name || 'файл';
+
+        if (t.indexOf('image') === 0) {
+          div.innerHTML = '<img src="' + url + '"><span class="badge">IMG</span>';
+          div.onclick = function() { openFullscreen(f.id, fname, 'image', url); };
+        } else if (t.indexOf('video') === 0) {
+          var v = document.createElement('video');
+          v.src = url;
+          v.muted = true;
+          v.preload = 'metadata';
+          v.setAttribute('playsinline', '');
+          div.appendChild(v);
+          var b = document.createElement('span');
+          b.className = 'badge';
+          b.textContent = 'VID';
+          div.appendChild(b);
+          div.onclick = function() { openFullscreen(f.id, fname, 'video', url); };
+        } else {
+          div.innerHTML = '<div class="file-icon"><span class="ext">' + iconFor(t, fname) + '</span>' + extOf(fname) + '<br>' + Math.round(f.blob.size/1024) + ' КБ</div><span class="badge">FILE</span>';
+          div.onclick = function() { downloadFile(f); };
+        }
+
+        var del = document.createElement('button');
+        del.className = 'del';
+        del.textContent = '×';
+        del.onclick = function(e) {
+          e.stopPropagation();
+          deleteFile(f.id, fname);
+        };
+        div.appendChild(del);
+
+        photosDiv.appendChild(div);
+      })(files[i]);
+    }
+  };
+}
+
+function addFiles(accept) {
+  fileInput.accept = accept;
+  fileInput.click();
+}
+
+fileInput.addEventListener('change', function(e) {
+  var files = Array.from(e.target.files);
+  if (files.length === 0) return;
+  if (!db) { openDB(); }
+  var done = 0;
+  files.forEach(function(file) {
+    var tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).add({
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      blob: file,
+      size: file.size,
+      date: Date.now()
+    });
+    tx.oncomplete = function() {
+      done++;
+      if (done === files.length) {
+        fileInput.value = '';
+        loadFiles();
+      }
+    };
+    tx.onerror = function() {
+      done++;
+      if (done === files.length) loadFiles();
+    };
+  });
+});
+
+function downloadFile(f) {
+  var url = URL.createObjectURL(f.blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = f.name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(function() { URL.revokeObjectURL(url); }, 3000);
+}
+
+function openFullscreen(id, name, kind, url) {
+  var box = document.getElementById('fsContent');
+  box.innerHTML = '';
+  if (kind === 'image') {
+    var img = document.createElement('img');
+    img.src = url;
+    box.appendChild(img);
+  } else {
+    var v = document.createElement('video');
+    v.src = url;
+    v.controls = true;
+    v.autoplay = true;
+    v.setAttribute('playsinline', '');
+    v.style.maxWidth = '100%';
+    v.style.maxHeight = '100%';
+    box.appendChild(v);
+  }
+  fsCurrent = { id: id, name: name, url: url };
+  document.getElementById('fullscreen').classList.add('active');
+}
+
+function closeFullscreen() {
+  var box = document.getElementById('fsContent');
+  var v = box.querySelector('video');
+  if (v) v.pause();
+  box.innerHTML = '';
+  fsCurrent = null;
+  document.getElementById('fullscreen').classList.remove('active');
+}
+
+function deleteCurrentFs() {
+  if (!fsCurrent) return;
+  var id = fsCurrent.id;
+  var name = fsCurrent.name;
+  if (!confirm('Удалить «' + name + '»?')) return;
+  var tx = db.transaction(STORE, 'readwrite');
+  tx.objectStore(STORE).delete(id);
+  tx.oncomplete = function() {
+    closeFullscreen();
+    loadFiles();
+  };
+}
+
+function clearAllData() {
+  if (!confirm('Удалить ВСЕ фото, видео и файлы?')) return;
+  if (!confirm('Точно уверен?')) return;
+  var tx = db.transaction(STORE, 'readwrite');
+  tx.objectStore(STORE).clear();
+  tx.oncomplete = function() {
+    loadFiles();
+    alert('Всё удалено.');
+  };
+}
+
+// Запуск
+openDB();
+requestPersist();
+checkIOSHint();
+</script>
+</body>
+</html>
